@@ -12,6 +12,7 @@
             --text: #333333;
             --border: #dddddd;
             --success: #28a745;
+            --secondary: #17a2b8;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -28,10 +29,10 @@
         }
         .card {
             background-color: var(--card-bg);
-            padding: 20px;
+            padding: 25px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         .form-group {
             display: flex;
@@ -40,12 +41,13 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        input {
+        input, select {
             padding: 10px;
             border: 1px solid var(--border);
             border-radius: 4px;
             flex: 1;
-            min-width: 100px;
+            min-width: 120px;
+            font-size: 1em;
         }
         button {
             background-color: var(--primary);
@@ -56,13 +58,21 @@
             cursor: pointer;
             font-weight: bold;
             transition: background 0.3s;
+            font-size: 1em;
         }
         button:hover {
             background-color: #004a94;
         }
+        .btn-secondary {
+            background-color: var(--secondary);
+        }
+        .btn-secondary:hover {
+            background-color: #138496;
+        }
         .remove-btn {
             background-color: #dc3545;
             padding: 5px 10px;
+            font-size: 0.9em;
         }
         .remove-btn:hover {
             background-color: #c82333;
@@ -81,9 +91,14 @@
             background-color: var(--bg);
             color: var(--primary);
         }
-        #results-panel {
+        .results-panel {
             display: none;
             border-top: 4px solid var(--primary);
+            margin-top: 20px;
+            padding-top: 20px;
+            background-color: #fafbfc;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
         }
         .highlight {
             font-size: 1.2em;
@@ -98,14 +113,35 @@
 </head>
 <body>
 
-    <h1>GCU Honours Classification Calculator</h1>
+    <h1>GCU Honours Hub</h1>
     
     <div class="card">
-        <h2>1. Add Your Modules</h2>
+        <h2>🎯 Target Grade Calculator (Year 3)</h2>
+        <p>Enter your Year 3 average to see what you need in Year 4 to hit your goal.</p>
+        
+        <div class="form-group">
+            <input type="number" id="y3-avg" placeholder="Year 3 Average (%)" min="0" max="100">
+            <input type="number" id="y3-credits" placeholder="Credits banked (e.g., 60 or 80)" min="10" max="90" step="10">
+            <select id="target-class">
+                <option value="70">Target: 1st Class</option>
+                <option value="60">Target: 2.1</option>
+                <option value="50">Target: 2.2</option>
+            </select>
+            <button class="btn-secondary" id="calc-target-btn">Calculate Target</button>
+        </div>
+        
+        <div id="target-results" class="results-panel">
+            </div>
+    </div>
+
+    <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+    <div class="card">
+        <h2>🎓 Final Classification Calculator</h2>
         <p>Enter your best 180 credits (including your dissertation and at least 90 credits at SCQF Level 10).</p>
         
         <form id="module-form" class="form-group">
-            <input type="text" id="mod-name" placeholder="Module Name (e.g., Dissertation)" required>
+            <input type="text" id="mod-name" placeholder="Module Name" required>
             <input type="number" id="mod-grade" placeholder="Grade %" min="0" max="100" required>
             <input type="number" id="mod-credits" placeholder="Credits (e.g., 20)" step="10" min="10" required>
             <button type="submit">Add Module</button>
@@ -126,19 +162,63 @@
         </table>
         
         <div style="text-align: center; margin-top: 20px;">
-            <button id="calculate-btn" style="font-size: 1.1em; padding: 15px 30px;">Calculate My Classification</button>
+            <button id="calculate-btn" style="font-size: 1.1em; padding: 15px 30px;">Calculate Final Award</button>
+        </div>
+
+        <div id="results-panel" class="results-panel">
+            <div id="results-content"></div>
         </div>
     </div>
 
-    <div class="card" id="results-panel">
-        <h2>2. Your Results</h2>
-        <div id="results-content"></div>
-    </div>
-
     <script>
-        let modules = [];
+        // --- TARGET CALCULATOR LOGIC (YEAR 3) ---
+        document.getElementById('calc-target-btn').addEventListener('click', function() {
+            const y3Avg = parseFloat(document.getElementById('y3-avg').value);
+            const y3Credits = parseInt(document.getElementById('y3-credits').value);
+            const targetBoundary = parseInt(document.getElementById('target-class').value);
 
-        // DOM Elements
+            if(!y3Avg || !y3Credits) {
+                alert("Please enter your Year 3 average and the number of credits you want to count.");
+                return;
+            }
+            if(y3Credits > 90) {
+                alert("You can only use a maximum of 90 credits from Year 3 (Level 9) in the standard 180-credit calculation.");
+                return;
+            }
+
+            const remainingCredits = 180 - y3Credits;
+            
+            // Calculate for the guaranteed boundary
+            const totalPointsNeeded = targetBoundary * 180;
+            const pointsSoFar = y3Avg * y3Credits;
+            const remainingPointsNeeded = totalPointsNeeded - pointsSoFar;
+            const requiredAvg = remainingPointsNeeded / remainingCredits;
+
+            // Calculate for the profiling boundary (3% lower)
+            const profileBoundary = targetBoundary - 3;
+            const profilePointsNeeded = profileBoundary * 180;
+            const remainingProfilePoints = profilePointsNeeded - pointsSoFar;
+            const requiredProfileAvg = remainingProfilePoints / remainingCredits;
+
+            let html = ``;
+            if (requiredAvg > 100) {
+                html += `<p style="color:red;"><strong>Tough news:</strong> A mathematically guaranteed average for this classification is out of reach (requires averaging ${requiredAvg.toFixed(1)}%).</p>`;
+            } else {
+                html += `<p>To <strong>guarantee</strong> this classification, you need to average <span class="highlight">${requiredAvg.toFixed(1)}%</span> across your remaining ${remainingCredits} Level 10 credits.</p>`;
+            }
+
+            if (requiredProfileAvg <= 100) {
+                 html += `<hr><p>To reach the <strong>Profiling Zone</strong> (within 3% of the boundary), you need to average <span class="highlight">${requiredProfileAvg.toFixed(1)}%</span>.</p>`;
+                 html += `<p style="font-size:0.85em; color:#666;"><em>*Note: To get bumped up via profiling, you will also need to ensure 120 of your total 180 credits achieve the target grade or higher!</em></p>`;
+            }
+
+            const targetPanel = document.getElementById('target-results');
+            targetPanel.innerHTML = html;
+            targetPanel.style.display = 'block';
+        });
+
+        // --- FINAL CLASSIFICATION LOGIC (ORIGINAL) ---
+        let modules = [];
         const form = document.getElementById('module-form');
         const list = document.getElementById('module-list');
         const totalCreditsDisplay = document.getElementById('total-credits');
@@ -146,32 +226,25 @@
         const resultsPanel = document.getElementById('results-panel');
         const resultsContent = document.getElementById('results-content');
 
-        // Handle adding a module
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const name = document.getElementById('mod-name').value;
             const grade = parseFloat(document.getElementById('mod-grade').value);
             const credits = parseInt(document.getElementById('mod-credits').value);
-
             modules.push({ id: Date.now(), name, grade, credits });
-            
             form.reset();
             document.getElementById('mod-name').focus();
             renderModules();
         });
 
-        // Handle removing a module
         function removeModule(id) {
             modules = modules.filter(m => m.id !== id);
             renderModules();
         }
 
-        // Update the UI table
         function renderModules() {
             list.innerHTML = '';
             let totalCredits = 0;
-
             modules.forEach(mod => {
                 totalCredits += mod.credits;
                 const row = document.createElement('tr');
@@ -183,20 +256,12 @@
                 `;
                 list.appendChild(row);
             });
-
             totalCreditsDisplay.innerText = totalCredits;
-            
-            // Color code the credits counter
-            if(totalCredits === 180) {
-                totalCreditsDisplay.style.color = 'green';
-            } else if (totalCredits > 180) {
-                totalCreditsDisplay.style.color = 'red';
-            } else {
-                totalCreditsDisplay.style.color = 'black';
-            }
+            if(totalCredits === 180) totalCreditsDisplay.style.color = 'green';
+            else if (totalCredits > 180) totalCreditsDisplay.style.color = 'red';
+            else totalCreditsDisplay.style.color = 'black';
         }
 
-        // GCU Grading Rules
         function getClassificationInfo(grade) {
             if (grade >= 70) return { val: 1, label: "1st Class", bound: 70 };
             if (grade >= 60) return { val: 2.1, label: "Upper Second Class (2.1)", bound: 60 };
@@ -205,7 +270,6 @@
             return { val: 4.0, label: "Fail", bound: 0 };
         }
 
-        // Handle Calculation
         calcBtn.addEventListener('click', function() {
             if (modules.length === 0) {
                 alert("Please add some modules first!");
@@ -213,7 +277,6 @@
             }
 
             const totalCredits = modules.reduce((sum, mod) => sum + mod.credits, 0);
-            
             let html = ``;
             if (totalCredits !== 180) {
                 html += `<p style="color: red;"><strong>Warning:</strong> The standard calculation expects exactly 180 credits. You have entered ${totalCredits}.</p>`;
@@ -226,8 +289,9 @@
             html += `<p><strong>Credit-Weighted Average:</strong> ${average.toFixed(2)}%</p>`;
             html += `<p><strong>Base Classification:</strong> ${baseClass.label}</p><hr>`;
 
-            // Profiling Check
+            // Profiling Check (Bug Fixed!)
             const nextBound = baseClass.bound < 70 ? baseClass.bound + 10 : 70;
+            
             if (baseClass.val > 1 && (nextBound - average) <= 3 && average < nextBound) {
                 const nextClass = getClassificationInfo(nextBound);
                 
@@ -256,7 +320,6 @@
 
             resultsContent.innerHTML = html;
             resultsPanel.style.display = 'block';
-            resultsPanel.scrollIntoView({ behavior: 'smooth' });
         });
     </script>
 </body>
