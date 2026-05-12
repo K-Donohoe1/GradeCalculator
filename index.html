@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCU Honours Calculator</title>
+    <style>
+        :root {
+            --primary: #005eb8; /* GCU Blue */
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #dddddd;
+            --success: #28a745;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: var(--primary);
+            text-align: center;
+        }
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            flex: 1;
+            min-width: 100px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #004a94;
+        }
+        .remove-btn {
+            background-color: #dc3545;
+            padding: 5px 10px;
+        }
+        .remove-btn:hover {
+            background-color: #c82333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background-color: var(--bg);
+            color: var(--primary);
+        }
+        #results-panel {
+            display: none;
+            border-top: 4px solid var(--primary);
+        }
+        .highlight {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .success-text {
+            color: var(--success);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>GCU Honours Classification Calculator</h1>
+    
+    <div class="card">
+        <h2>1. Add Your Modules</h2>
+        <p>Enter your best 180 credits (including your dissertation and at least 90 credits at SCQF Level 10).</p>
+        
+        <form id="module-form" class="form-group">
+            <input type="text" id="mod-name" placeholder="Module Name (e.g., Dissertation)" required>
+            <input type="number" id="mod-grade" placeholder="Grade %" min="0" max="100" required>
+            <input type="number" id="mod-credits" placeholder="Credits (e.g., 20)" step="10" min="10" required>
+            <button type="submit">Add Module</button>
+        </form>
+
+        <h3>Module List (<span id="total-credits">0</span> / 180 Credits)</h3>
+        <table id="module-table">
+            <thead>
+                <tr>
+                    <th>Module Name</th>
+                    <th>Grade (%)</th>
+                    <th>Credits</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="module-list">
+                </tbody>
+        </table>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="calculate-btn" style="font-size: 1.1em; padding: 15px 30px;">Calculate My Classification</button>
+        </div>
+    </div>
+
+    <div class="card" id="results-panel">
+        <h2>2. Your Results</h2>
+        <div id="results-content"></div>
+    </div>
+
+    <script>
+        let modules = [];
+
+        // DOM Elements
+        const form = document.getElementById('module-form');
+        const list = document.getElementById('module-list');
+        const totalCreditsDisplay = document.getElementById('total-credits');
+        const calcBtn = document.getElementById('calculate-btn');
+        const resultsPanel = document.getElementById('results-panel');
+        const resultsContent = document.getElementById('results-content');
+
+        // Handle adding a module
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('mod-name').value;
+            const grade = parseFloat(document.getElementById('mod-grade').value);
+            const credits = parseInt(document.getElementById('mod-credits').value);
+
+            modules.push({ id: Date.now(), name, grade, credits });
+            
+            form.reset();
+            document.getElementById('mod-name').focus();
+            renderModules();
+        });
+
+        // Handle removing a module
+        function removeModule(id) {
+            modules = modules.filter(m => m.id !== id);
+            renderModules();
+        }
+
+        // Update the UI table
+        function renderModules() {
+            list.innerHTML = '';
+            let totalCredits = 0;
+
+            modules.forEach(mod => {
+                totalCredits += mod.credits;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${mod.name}</td>
+                    <td>${mod.grade}%</td>
+                    <td>${mod.credits}</td>
+                    <td><button class="remove-btn" onclick="removeModule(${mod.id})">Remove</button></td>
+                `;
+                list.appendChild(row);
+            });
+
+            totalCreditsDisplay.innerText = totalCredits;
+            
+            // Color code the credits counter
+            if(totalCredits === 180) {
+                totalCreditsDisplay.style.color = 'green';
+            } else if (totalCredits > 180) {
+                totalCreditsDisplay.style.color = 'red';
+            } else {
+                totalCreditsDisplay.style.color = 'black';
+            }
+        }
+
+        // GCU Grading Rules
+        function getClassificationInfo(grade) {
+            if (grade >= 70) return { val: 1, label: "1st Class", bound: 70 };
+            if (grade >= 60) return { val: 2.1, label: "Upper Second Class (2.1)", bound: 60 };
+            if (grade >= 50) return { val: 2.2, label: "Lower Second Class (2.2)", bound: 50 };
+            if (grade >= 40) return { val: 3.0, label: "Third Class (3rd)", bound: 40 };
+            return { val: 4.0, label: "Fail", bound: 0 };
+        }
+
+        // Handle Calculation
+        calcBtn.addEventListener('click', function() {
+            if (modules.length === 0) {
+                alert("Please add some modules first!");
+                return;
+            }
+
+            const totalCredits = modules.reduce((sum, mod) => sum + mod.credits, 0);
+            
+            let html = ``;
+            if (totalCredits !== 180) {
+                html += `<p style="color: red;"><strong>Warning:</strong> The standard calculation expects exactly 180 credits. You have entered ${totalCredits}.</p>`;
+            }
+
+            const weightedSum = modules.reduce((sum, mod) => sum + (mod.grade * mod.credits), 0);
+            const average = weightedSum / totalCredits;
+            const baseClass = getClassificationInfo(average);
+
+            html += `<p><strong>Credit-Weighted Average:</strong> ${average.toFixed(2)}%</p>`;
+            html += `<p><strong>Base Classification:</strong> ${baseClass.label}</p><hr>`;
+
+            // Profiling Check
+            const nextBound = baseClass.bound < 70 ? baseClass.bound + 10 : 70;
+            if (baseClass.val > 1 && (nextBound - average) <= 3 && average < nextBound) {
+                const nextClass = getClassificationInfo(nextBound);
+                
+                html += `<p class="highlight">Profiling Zone!</p>`;
+                html += `<p>Your average is within 3% of a ${nextClass.label}. Let's check the rules...</p>`;
+
+                const creditsHigher = modules.filter(m => m.grade >= nextBound).reduce((sum, m) => sum + m.credits, 0);
+                const creditsBelow = modules.filter(m => m.grade < baseClass.bound).reduce((sum, m) => sum + m.credits, 0);
+
+                html += `<ul>`;
+                html += `<li>Credits at or above ${nextBound}%: <strong>${creditsHigher}</strong> (Requires 120)</li>`;
+                html += `<li>Credits below ${baseClass.bound}%: <strong>${creditsBelow}</strong> (Max allowed is 30)</li>`;
+                html += `</ul>`;
+
+                if (creditsHigher >= 120 && creditsBelow <= 30) {
+                    html += `<p class="success-text">SUCCESS! Profiling conditions met. You have been bumped up.</p>`;
+                    html += `<h3>Final Awarded Degree: <span class="highlight">${nextClass.label}</span></h3>`;
+                } else {
+                    html += `<p>Profiling conditions not met. You remain at your base classification.</p>`;
+                    html += `<h3>Final Awarded Degree: <span class="highlight">${baseClass.label}</span></h3>`;
+                }
+            } else {
+                html += `<p>Profiling does not apply (you are not within 3% below a grade boundary).</p>`;
+                html += `<h3>Final Awarded Degree: <span class="highlight">${baseClass.label}</span></h3>`;
+            }
+
+            resultsContent.innerHTML = html;
+            resultsPanel.style.display = 'block';
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>
