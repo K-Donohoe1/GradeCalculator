@@ -13,6 +13,7 @@
             --border: #dddddd;
             --success: #28a745;
             --secondary: #17a2b8;
+            --warning: #ffc107;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -109,6 +110,13 @@
             color: var(--success);
             font-weight: bold;
         }
+        .notice-box {
+            background-color: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -120,8 +128,8 @@
         <p>Enter your Year 3 average to see what you need in Year 4 to hit your goal.</p>
         
         <div class="form-group">
-            <input type="number" id="y3-avg" placeholder="Year 3 Average (%)" min="0" max="100">
-            <input type="number" id="y3-credits" placeholder="Credits banked (e.g., 60 or 80)" min="10" max="90" step="10">
+            <input type="number" id="y3-avg" placeholder="Year 3 Avg (%)" min="0" max="100">
+            <input type="number" id="y3-credits" placeholder="Year 3 Credits (e.g., 80)" min="10" max="90" step="10">
             <select id="target-class">
                 <option value="70">Target: 1st Class</option>
                 <option value="60">Target: 2.1</option>
@@ -200,15 +208,16 @@
             const remainingProfilePoints = profilePointsNeeded - pointsSoFar;
             const requiredProfileAvg = remainingProfilePoints / remainingCredits;
 
-            let html = ``;
+            let html = `<p>Because you are banking <strong>${y3Credits} credits</strong> from Year 3, your calculation requires exactly <strong>${remainingCredits} credits</strong> from Year 4 to hit the magic 180 number.</p>`;
+            
             if (requiredAvg > 100) {
                 html += `<p style="color:red;"><strong>Tough news:</strong> A mathematically guaranteed average for this classification is out of reach (requires averaging ${requiredAvg.toFixed(1)}%).</p>`;
             } else {
-                html += `<p>To <strong>guarantee</strong> this classification, you need to average <span class="highlight">${requiredAvg.toFixed(1)}%</span> across your remaining ${remainingCredits} Level 10 credits.</p>`;
+                html += `<p>To <strong>guarantee</strong> this classification, you need to average <span class="highlight">${requiredAvg.toFixed(1)}%</span> across those remaining ${remainingCredits} Year 4 credits.</p>`;
             }
 
             if (requiredProfileAvg <= 100) {
-                 html += `<hr><p>To reach the <strong>Profiling Zone</strong> (within 3% of the boundary), you need to average <span class="highlight">${requiredProfileAvg.toFixed(1)}%</span>.</p>`;
+                 html += `<hr><p>To reach the <strong>Profiling Zone</strong> (within 3% of the boundary), you only need to average <span class="highlight">${requiredProfileAvg.toFixed(1)}%</span>.</p>`;
                  html += `<p style="font-size:0.85em; color:#666;"><em>*Note: To get bumped up via profiling, you will also need to ensure 120 of your total 180 credits achieve the target grade or higher!</em></p>`;
             }
 
@@ -279,7 +288,7 @@
             const totalCredits = modules.reduce((sum, mod) => sum + mod.credits, 0);
             let html = ``;
             if (totalCredits !== 180) {
-                html += `<p style="color: red;"><strong>Warning:</strong> The standard calculation expects exactly 180 credits. You have entered ${totalCredits}.</p>`;
+                html += `<div class="notice-box"><strong>Note:</strong> You currently have ${totalCredits} credits inputted. The Final Classification calculation requires exactly 180 credits. If you are still in Year 3, this is completely normal! Just use the Target Calculator above instead.</div>`;
             }
 
             const weightedSum = modules.reduce((sum, mod) => sum + (mod.grade * mod.credits), 0);
@@ -289,7 +298,7 @@
             html += `<p><strong>Credit-Weighted Average:</strong> ${average.toFixed(2)}%</p>`;
             html += `<p><strong>Base Classification:</strong> ${baseClass.label}</p><hr>`;
 
-            // Profiling Check (Bug Fixed!)
+            // Profiling Check
             const nextBound = baseClass.bound < 70 ? baseClass.bound + 10 : 70;
             
             if (baseClass.val > 1 && (nextBound - average) <= 3 && average < nextBound) {
